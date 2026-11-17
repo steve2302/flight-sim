@@ -38,8 +38,22 @@
           <option value="1">True size for this field of view</option>
           <option value="1.5">×1.5 (closer to real apparent size on a typical monitor)</option>
           <option value="2">×2 (beginner)</option>
+          <option value="2.5">×2.5</option>
+          <option value="3">×3 (low-resolution screen)</option>
+          <option value="4">×4 (learning species field marks)</option>
         </select>
       </label>
+      <label>Playback speed
+        <select id="f-speed">
+          <option value="1">100% — real time (100 kn)</option>
+          <option value="0.8">80%</option>
+          <option value="0.65">65%</option>
+          <option value="0.5">50% — half speed</option>
+          <option value="0.35">35%</option>
+          <option value="0.25">25% — beginner</option>
+        </select>
+      </label>
+      <p class="dim small">Slower playback is slow motion: the aircraft still flies 100 kn and every animal stays in the same place, so scores and SPOTTER files are unaffected. In Practice mode, press − and = during the run to change speed.</p>
       <label>Graphics quality
         <select id="f-quality"><option value="high">High (desktop GPU)</option><option value="low">Low (tablet / laptop)</option></select>
       </label>

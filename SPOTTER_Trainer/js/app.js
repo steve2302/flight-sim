@@ -43,6 +43,11 @@
     $('f-position').value = 'RightFront';
     $('f-seed').value = 'K' + String(Math.floor(Math.random() * 9000) + 1000);
     try { $('f-observer').value = localStorage.getItem('st-observer') || ''; } catch (e) { /* storage unavailable */ }
+    // Remember the size and speed training aids between visits
+    ['f-boost', 'f-speed'].forEach(id => {
+      try { const v = localStorage.getItem('st-' + id); if (v && [...$(id).options].some(o => o.value === v)) $(id).value = v; } catch (e) { /* ignore */ }
+      $(id).addEventListener('change', () => { try { localStorage.setItem('st-' + id, $(id).value); } catch (e) { /* ignore */ } });
+    });
 
     $('f-mode').addEventListener('change', () => {
       const practice = $('f-mode').value === 'practice';
@@ -142,14 +147,15 @@
     const settings = {
       guides: $('f-guides').checked, labels: $('f-labels').checked,
       speech: $('f-speech').checked, quality: $('f-quality').value,
-      sizeBoost: +$('f-boost').value
+      sizeBoost: +$('f-boost').value,
+      playbackRate: +$('f-speed').value
     };
     const session = {
       format: 'spotter-trainer-session', version: 1, appVersion: ST.VERSION,
       scenarioId: sc.id, scenarioHash: sc.hash,
       observer, position, side, seat: /Rear$/.test(position) ? 'Rear' : 'Front',
       session: $('f-session').value, mode: $('f-mode').value,
-      startUTC: null, endUTC: null, presses: [], records: [], preTokens: [], pauses: [],
+      startUTC: null, endUTC: null, presses: [], records: [], preTokens: [], pauses: [], rateChanges: [],
       settings, configSource: state.configSource, scenario: sc
     };
 
@@ -171,7 +177,8 @@
     run = {
       sc, session, world, overlay, builder, input, settings,
       t: 0, paused: false, ended: false, lastFrame: null, raf: 0, hud: true,
-      openRec: null, lastPressT: 0, claimed: new Set(), missedPtr: 0,
+      rate: settings.playbackRate || 1, realT: 0,
+      openRec: null, lastPressT: 0, lastPressReal: 0, claimed: new Set(), missedPtr: 0,
       targets: sc.groups.filter(g => g.side === side && g.binIdx >= 0 && g.binIdx < CFG.bins.length)
         .sort((a, b) => a.tExit - b.tExit)
     };
@@ -210,13 +217,15 @@
     run.input.poll();
     const dt = Math.min((now - run.lastFrame) / 1000, 0.25);
     run.lastFrame = now;
-    if (!run.paused) run.t += dt;
+    // Sim time runs at the playback rate (slow motion); the idle timeout that closes a
+    // record is in real time, so slow playback doesn't make feedback lag.
+    if (!run.paused) { run.t += dt * run.rate; run.realT += dt; }
     const t = run.t;
     run.world.update(t);
     run.world.render();
     run.overlay.draw(run.world, t);
 
-    if (run.openRec && t - run.lastPressT > CFG.recordCloseS) closeRecord();
+    if (run.openRec && run.realT - run.lastPressReal > CFG.recordCloseS) closeRecord();
     if (run.session.mode === 'practice') checkMissed(t);
     updateHud();
     if (t >= run.sc.endS) finishSession();
@@ -227,6 +236,7 @@
     const t = run.t;
     const res = run.builder.press(btn, t);
     run.lastPressT = t;
+    run.lastPressReal = run.realT;
     if (res.type === 'new') {
       if (run.openRec && run.openRec !== res.record) closeRecord();
       run.openRec = /^(start|end)_transect$/.test(res.data) ? null : res.record;
@@ -284,6 +294,14 @@
   }
 
   let bannerTimer = 0;
+  /** Report note for slowed playback: the starting rate, plus any live changes. */
+  function speedNote(s) {
+    const rates = [(s.settings && s.settings.playbackRate) || 1].concat((s.rateChanges || []).map(c => c.rate));
+    if (rates.every(r => r === 1)) return '';
+    const uniq = [...new Set(rates)].map(r => Math.round(r * 100) + '%');
+    return ` · <span class="warn">playback ${uniq.join(' → ')}</span>`;
+  }
+
   function banner(text, secs) {
     const b = $('banner'); b.textContent = text; b.classList.remove('hidden');
     clearTimeout(bannerTimer);
@@ -302,7 +320,7 @@
         : `${speciesShort(p.species)} · ${p.hasCount ? p.count : '–'} · ${p.bin || '–'}${p.glare ? ' · glare' : ''}${p.deleted ? ' · DELETED' : ''}`;
     }
     $('hud-rec').textContent = rec;
-    $('hud-time').textContent = `${fmtT(run.t)} / ${fmtT(run.sc.endS)}`;
+    $('hud-time').textContent = `${fmtT(run.t)} / ${fmtT(run.sc.endS)}${run.rate !== 1 ? ` · ${Math.round(run.rate * 100)}%` : ''}`;
     $('hud-pad').textContent = run.input.padName ? '🎮' : '⌨';
   }
 
@@ -317,6 +335,19 @@
     if (!run || run.ended || $('sim').classList.contains('hidden')) return;
     if (e.code === 'Escape' || e.code === 'KeyP') { setPaused(!run.paused); e.preventDefault(); }
     else if (e.code === 'KeyH') run.hud = !run.hud;
+    else if ((e.code === 'Minus' || e.code === 'Equal' || e.code === 'NumpadSubtract' || e.code === 'NumpadAdd') && !run.paused) {
+      if (run.session.mode !== 'practice') { banner('Speed is fixed in Assessment mode', 1.5); return; }
+      const steps = [...$('f-speed').options].map(o => +o.value).sort((a, b) => a - b);
+      let i = steps.findIndex(v => Math.abs(v - run.rate) < 1e-6);
+      if (i < 0) i = steps.length - 1;
+      i = Math.max(0, Math.min(steps.length - 1, i + (/Minus|Subtract/.test(e.code) ? -1 : 1)));
+      if (steps[i] !== run.rate) {
+        run.rate = steps[i];
+        run.session.rateChanges.push({ t: +run.t.toFixed(3), rate: run.rate });
+      }
+      banner(`Playback ${Math.round(run.rate * 100)}%`, 1.2);
+      e.preventDefault();
+    }
     else if (e.code === 'KeyF') {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
       else document.exitFullscreen();
@@ -404,7 +435,7 @@
       <div class="report-head">
         <div>
           <h1>${esc(s.observer)} <span class="dim">· ${esc(s.position)} · ${s.mode === 'practice' ? 'Practice' : 'Assessment'}</span></h1>
-          <p class="dim">Scenario <code>${esc(sc.id)}</code> · ${new Date(s.startUTC).toLocaleString()} · ${fmtT(s.durationS)} flown${s.completed ? '' : ' (ended early)'}${s.settings && s.settings.sizeBoost > 1 ? ` · <span class="warn">animals enlarged ×${s.settings.sizeBoost}</span>` : ''}</p>
+          <p class="dim">Scenario <code>${esc(sc.id)}</code> · ${new Date(s.startUTC).toLocaleString()} · ${fmtT(s.durationS)} flown${s.completed ? '' : ' (ended early)'}${s.settings && s.settings.sizeBoost > 1 ? ` · <span class="warn">animals enlarged ×${s.settings.sizeBoost}</span>` : ''}${speedNote(s)}</p>
         </div>
         <div class="score"><div class="sv">${m.score == null ? '—' : Math.round(m.score)}</div><div class="sl">overall score</div></div>
       </div>
@@ -516,7 +547,9 @@
     }
     if (sessions.length < 1) { setMsg('compare-msg', 'No observer sessions loaded.', true); return; }
     const boosts = new Set(sessions.map(s => (s.settings && s.settings.sizeBoost) || 1));
+    const slowed = sessions.some(s => speedNote(s));
     if (boosts.size > 1) setMsg('compare-msg', 'Warning: observers flew with different animal-size settings, so they are not directly comparable.', true);
+    else if (slowed) setMsg('compare-msg', 'Warning: at least one observer flew with slowed playback, so detection rates are not comparable with real-time runs.', true);
     const results = sessions.map(s => ST.scoreSession(sc, s));
     const cmp = ST.compareResults(sc, results);
     state.lastCompare = { sc, results, cmp };

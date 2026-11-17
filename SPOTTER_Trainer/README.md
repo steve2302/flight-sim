@@ -67,9 +67,10 @@ On the **Compare observers** screen, load the `.session.json` files from observe
 
 ## Limitations
 
-- **Apparent size.** The view covers 66° vertically so all four bins fit on screen. On a typical monitor that makes animals look smaller than they do from the aircraft. **Animal size ×1.5** roughly corrects this; ×2 is a beginner aid. The setting is recorded in the session file, and the comparison screen warns if observers used different settings.
+- **Apparent size.** The view covers 66° vertically so all four bins fit on screen. On a typical monitor that makes animals look smaller than they do from the aircraft. **Animal size ×1.5** roughly corrects this. ×2 to ×4 are training aids for low-resolution screens and for learning species field marks. The setting is recorded in the session file, and the comparison screen warns if observers used different settings.
 - **Models.** Animals, trees and shrubs are low-poly models, and terrain is procedural. Each species carries its main field marks: red males are rust-red with white underparts and are the largest; red females are blue-grey with white underparts; greys are uniform grey-brown with dark paws, feet and tail tip; goats stand square on four legs, often patterned. Every animal and distractor casts a sharp low-sun shadow, and grazing or sitting animals move their heads. Photo-based animal sprites and real aerial imagery would be the next step for realism.
 - **Scenario files and geometry.** A scenario file records the survey geometry it was made with. Files made for a different height or bin layout (for example the earlier 96 m setting) are refused on the setup screen; generate a new scenario from the same seed instead.
+- **Playback speed.** Runs can play at 25–100% speed. This is slow motion: sim time, aircraft speed (100 kn) and animal positions are unchanged, so scores and `.dat` files stay valid. In Practice mode, − and = change speed during the run. The rate and any changes are saved in the session file and shown on the report. The comparison screen warns when slowed runs are compared.
 - **Seats.** Front and rear seats on the same side see the same ground. Only the strut's position in view changes.
 
 ## Files

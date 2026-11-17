@@ -7,6 +7,7 @@ Training simulators for kangaroo aerial survey observers.
 | | |
 |---|---|
 | [`SPOTTER_Trainer/`](SPOTTER_Trainer/) | Full observer trainer (Three.js). Scoring, SPOTTER `.dat` output and observer comparison. See its [README](SPOTTER_Trainer/README.md). |
+| [`HORSE_Trainer/`](HORSE_Trainer/) | Feral horse helicopter survey trainer: a separate copy of the SPOTTER Trainer with horse bands, foals, galloping and alpine/tablelands habitats. See its [README](HORSE_Trainer/README.md). |
 | [`outback_window_seat.py`](outback_window_seat.py) | Original Pygame prototype. Desktop only for now; ready for a WebAssembly build with [pygbag](https://pypi.org/project/pygbag/). |
 
 ## Running locally

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Horse lineup</title>
+<style>
+  html, body { margin: 0; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  #wrap { position: relative; width: 100vw; aspect-ratio: 16 / 9; }
+  canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  #bar { padding: 6px 10px; }
+</style>
+</head>
+<body>
+<!-- Dev page: a fixed scene with horse bands in each bin, for judging the view.
+     URL params: ?habitat=alpine|snowgum|tablelands|tablelandsOpen&sun=farSide|observerSide|ahead|behind&t=12&boost=1&seat=Front -->
+<div id="wrap"><canvas id="gl"></canvas><canvas id="ov"></canvas></div>
+<div id="bar"></div>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/scenario.js"></script>
+<script src="../js/overlay.js"></script>
+<script src="../js/world.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const habitat = q.get('habitat') || 'alpine', sun = q.get('sun') || 'farSide';
+  const t = +(q.get('t') || 14), boost = +(q.get('boost') || 1);
+  const sc = ST.generateScenario({ seed: 'lineup', durationS: 120, habitat, sun, distractors: false });
+  // Replace groups with a lineup: at the along-track position abeam at time t,
+  // spaced along-track by species, one row per bin centre.
+  const v = ST.CFG.speedMs, s0 = v * t;
+  // Columns: coats (with a foal beside the last adult); rows: one per bin centre.
+  // Column 5 is a galloping band (bolted 4 s before t) to judge the running file.
+  const cols = [['bay', 'graze'], ['chestnut', 'stand'], ['black', 'graze'], ['grey', 'stand'], ['bay', 'gallop']];
+  const Xs = [30, 50, 75, 105, 145];
+  const rng = ST.rng('lineup-members');
+  sc.groups = [];
+  Xs.forEach((X, bi) => cols.forEach(([coat, beh], k) => {
+    const members = [];
+    for (let i = 0; i < 4; i++) {
+      const foal = i === 3;
+      members.push({ ds: i * 2.6 - 3, dx: (i % 2) * 1.8, scale: foal ? 0.6 : 1, foal, coat,
+        pose: beh === 'stand' ? 'stand' : 'graze', yaw: rng() * 6.28, phase: rng() * 10 });
+    }
+    const g = { id: `${bi}${k}`, side: 'R', species: 'horse', size: 4, foals: 1, X, X0: X, s: s0 + (k - 2) * (16 + X * 0.25),
+      bin: ST.geom.binOf(X).key, binIdx: bi, behaviour: beh, members };
+    if (beh === 'gallop') g.flush = { leadM: (g.s - v * (t - 4)), dirA: 0.3, dirX: 0.95, speed: 11, durS: 30 };
+    Object.assign(g, { tEnter: 0, tAbeam: g.s / v, tExit: 1e9 });
+    sc.groups.push(g);
+  }));
+  const world = new ST.World(document.getElementById('gl'), sc, { side: 'R', quality: 'high', sizeBoost: boost });
+  const ov = new ST.Overlay(document.getElementById('ov'), { side: 'R', seat: q.get('seat') || 'Rear', guides: true, labels: true, glare: sun === 'observerSide' });
+  const W = +(q.get('w') || 1920); world.resize(W, W * 9 / 16); ov.resize(W, W * 9 / 16);
+  world.prewarm();
+  // Animate briefly so idle motion runs, then hold the frame at time t
+  let tt = t - 0.5;
+  function frame() {
+    world.update(tt); world.render(); ov.draw(world, tt);
+    if (tt < t) { tt += 1 / 60; requestAnimationFrame(frame); }
+    else document.title = 'ready';
+  }
+  frame();
+  document.getElementById('bar').textContent =
+    `Columns left→right: bay (graze), chestnut (stand), black (graze), grey (stand), galloping bay band; each band 3 adults + 1 foal. Rows: bin centres 10, 30, 55, 85, 125 m. habitat=${habitat} sun=${sun} boost=${boost}`;
+  window.world = world;
+})();
+</script>
+</body>
+</html>

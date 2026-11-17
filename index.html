@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kangaroo Survey Simulators</title>
+<style>
+  :root {
+    --bg: #f6f3ee; --card: #ffffff; --ink: #1f1d1a; --dim: #6b645a;
+    --accent: #b5521f; --line: #e2dbd0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17150f; --card: #221f19; --ink: #f1ece4; --dim: #a69d90;
+      --accent: #e98a52; --line: #3a352c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  .lede { color: var(--dim); margin: 0 0 32px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  a.card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 22px; transition: border-color .15s, transform .15s;
+  }
+  a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card h2 { margin: 0 0 6px; font-size: 1.2rem; }
+  .card p { margin: 0 0 12px; color: var(--dim); }
+  .tag { font-size: .8rem; color: var(--accent); font-weight: 600; letter-spacing: .02em; }
+  footer { margin-top: 40px; color: var(--dim); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kangaroo Survey Simulators</h1>
+  <p class="lede">Browser-based training tools for kangaroo aerial survey observers. The SPOTTER Trainer runs in the browser with nothing to install. Connect an Xbox controller and press any button so the browser detects it.</p>
+
+  <div class="grid">
+    <a class="card" href="SPOTTER_Trainer/">
+      <span class="tag">THREE.JS · WEBGL</span>
+      <h2>SPOTTER Trainer</h2>
+      <p>The full observer trainer: Cessna Caravan window view at 76 m AGL and 100 kn, SPOTTER controller mapping, distance bins, scoring against ground truth and double-observer comparisons.</p>
+      <span class="tag">Launch →</span>
+    </a>
+    <a class="card" href="https://github.com/steve2302/flight-sim/blob/main/outback_window_seat.py">
+      <span class="tag">PYTHON · DESKTOP</span>
+      <h2>Outback Window Seat</h2>
+      <p>The original Pygame prototype. Download and run with <code>python outback_window_seat.py</code> after <code>pip install pygame-ce</code>. Its loop is async, ready for a WebAssembly build with pygbag.</p>
+      <span class="tag">View source →</span>
+    </a>
+  </div>
+
+  <footer>Chrome or Edge recommended. Source code is in this repository.</footer>
+</main>
+</body>
+</html>

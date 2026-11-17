@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPOTTER Trainer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ======================= SETUP ======================= -->
+<main id="setup" class="screen page">
+  <header class="top">
+    <h1>SPOTTER Trainer</h1>
+    <p class="dim">Kangaroo aerial survey observer training · Cessna Caravan, 76 m AGL, 100 kn · bins from the 40 m blind strip</p>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Observer</h2>
+      <label>Name <input id="f-observer" type="text" autocomplete="off" placeholder="e.g. S McLeod"></label>
+      <div class="row">
+        <label>Seat <select id="f-position"></select></label>
+        <label>Session <select id="f-session"><option>AM</option><option>PM</option></select></label>
+      </div>
+      <label>Mode
+        <select id="f-mode">
+          <option value="practice">Practice — live feedback after each record</option>
+          <option value="assessment">Assessment — results only at the end</option>
+        </select>
+      </label>
+      <h2>Display</h2>
+      <label class="check"><input id="f-guides" type="checkbox" checked> Bin guide lines across the window (training aid)</label>
+      <label class="check"><input id="f-labels" type="checkbox" checked> Bin labels on the window frame</label>
+      <label class="check"><input id="f-speech" type="checkbox" checked> Spoken button cues (as SPOTTER)</label>
+      <label>Animal size
+        <select id="f-boost">
+          <option value="1">True size for this field of view</option>
+          <option value="1.5">×1.5 (closer to real apparent size on a typical monitor)</option>
+          <option value="2">×2 (beginner)</option>
+        </select>
+      </label>
+      <label>Graphics quality
+        <select id="f-quality"><option value="high">High (desktop GPU)</option><option value="low">Low (tablet / laptop)</option></select>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Scenario</h2>
+      <div class="row">
+        <label class="grow">Seed <input id="f-seed" class="gen-field" type="text"></label>
+        <button id="btn-new-seed" class="btn small gen-field" type="button" title="New random seed">↻</button>
+      </div>
+      <div class="row">
+        <label>Length
+          <select id="f-duration" class="gen-field">
+            <option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="20">20 min</option>
+          </select>
+        </label>
+        <label>Density
+          <select id="f-density" class="gen-field">
+            <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option>
+          </select>
+        </label>
+      </div>
+      <label>Habitat <select id="f-habitat" class="gen-field"></select></label>
+      <label>Sun <select id="f-sun" class="gen-field"></select></label>
+      <label class="check"><input id="f-distractors" class="gen-field" type="checkbox" checked> Distractors (emus, sheep, stumps, rocks, termite mounds)</label>
+      <p id="scenario-info" class="info"></p>
+      <div class="row wrap">
+        <button id="btn-dl-scenario" class="btn small" type="button">Save scenario file</button>
+        <label class="btn small file">Load scenario file<input id="f-scenario-file" type="file" accept=".json"></label>
+        <button id="btn-clear-scenario" class="btn small hidden" type="button">Use generator instead</button>
+      </div>
+      <p class="dim small">The same scenario file gives every observer exactly the same animals, terrain and aircraft motion.</p>
+    </section>
+
+    <section class="card">
+      <h2>Controller</h2>
+      <p id="pad-status" class="warn"></p>
+      <label class="btn small file">Load GamepadAudioConfig.csv<input id="f-config-file" type="file" accept=".csv"></label>
+      <div id="mapping"></div>
+      <p class="dim small">During a run: <b>Esc</b>/<b>P</b> pause · <b>F</b> full screen · <b>H</b> hide HUD</p>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button id="btn-start" class="btn primary" type="button">Start</button>
+    <button id="btn-compare" class="btn" type="button">Compare observers…</button>
+    <span id="setup-msg" class="msg"></span>
+  </div>
+</main>
+
+<!-- ======================= SIM ======================= -->
+<div id="sim" class="screen hidden">
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <canvas id="ov"></canvas>
+    <div id="hud"><span id="hud-pad"></span><span id="hud-rec">—</span><span id="hud-time"></span></div>
+    <div id="toasts"></div>
+    <div id="banner" class="hidden"></div>
+    <div id="pause" class="hidden">
+      <div class="pause-card">
+        <h2>Paused</h2>
+        <button id="btn-pause-resume" class="btn primary" type="button">Resume</button>
+        <button id="btn-pause-end" class="btn" type="button">End and score</button>
+        <button id="btn-pause-abandon" class="btn" type="button">Abandon</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= REPORT ======================= -->
+<main id="report" class="screen page hidden">
+  <div id="report-body"></div>
+  <div class="actions">
+    <button id="btn-dl-dat" class="btn" type="button">Download SPOTTER .dat</button>
+    <button id="btn-dl-session" class="btn" type="button">Download session file</button>
+    <button id="btn-dl-results" class="btn" type="button">Download results CSV</button>
+    <button id="btn-replay" class="btn primary" type="button">Same scenario, next observer</button>
+    <button id="btn-report-compare" class="btn" type="button">Compare…</button>
+    <button id="btn-home" class="btn" type="button">New scenario</button>
+  </div>
+</main>
+
+<!-- ======================= COMPARE ======================= -->
+<main id="compare" class="screen page hidden">
+  <header class="top">
+    <h1>Compare observers</h1>
+    <p class="dim">Load the session files (<code>.session.json</code>) from two or more observers who flew the same scenario. SPOTTER <code>.dat</code> files also work if a session or scenario file is loaded too.</p>
+  </header>
+  <div class="row wrap">
+    <label class="btn file">Add files…<input id="f-compare-files" type="file" multiple accept=".json,.dat"></label>
+    <button id="btn-compare-run" class="btn primary" type="button">Compare</button>
+    <button id="btn-compare-clear" class="btn" type="button">Clear</button>
+    <button id="btn-compare-back" class="btn" type="button">Back</button>
+    <span id="compare-msg" class="msg"></span>
+  </div>
+  <ul id="compare-files" class="files"></ul>
+  <div id="compare-body"></div>
+</main>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/scenario.js"></script>
+<script src="js/spotter.js"></script>
+<script src="js/scoring.js"></script>
+<script src="js/world.js"></script>
+<script src="js/overlay.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
